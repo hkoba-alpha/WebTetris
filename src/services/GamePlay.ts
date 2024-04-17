@@ -1,7 +1,7 @@
 import { BlockRender, DrawBlockData, getBlockRender } from "./BlockRender";
 import { FontRender, getFontRender } from "./FontRender";
 import { ButtonType, IPlay, StickData } from "./PlayData";
-import { ButtonData, INextMino, ITetrisListener, PlayConfig, PlayData, Tetrimino, TgmPlayListener, minoColorPattern, normalTgmConfig } from "./TetrisService";
+import { ButtonData, INextMino, ITetrisListener, PlayConfig, PlayData, TgmConfig, TgmPlayListener, minoColorPattern } from "./TetrisService";
 import { TitlePlay } from "./TitlePlay";
 
 const buttonTypeList = [
@@ -44,11 +44,11 @@ export class GamePlay implements IPlay, ITetrisListener {
     private nextPos = 0;
     private startCount = 180;
 
-    public constructor(gl: WebGL2RenderingContext) {
+    public constructor(gl: WebGL2RenderingContext, config: TgmConfig) {
         this.button = new ButtonData();
         this.fontRender = getFontRender(gl);
         this.blockRender = getBlockRender(gl);
-        this.tgmListener = new TgmPlayListener(normalTgmConfig);
+        this.tgmListener = new TgmPlayListener(config);
         this.playData = new PlayData(this.button, this);
         this.blockRender.setWeight(0, 0);
     }
@@ -83,7 +83,7 @@ export class GamePlay implements IPlay, ITetrisListener {
         return this.tgmListener.getNextMino();
     }
     onMove(before: { index: number; pos: number[]; }, after: { index: number; pos: number[]; }, type: ButtonType): void {
-        if (type == ButtonType.Hold) {
+        if (type === ButtonType.Hold) {
             let mx = before.pos[0];
             let my = before.pos[1];
             for (let i = 2; i < before.pos.length; i += 2) {
@@ -108,7 +108,7 @@ export class GamePlay implements IPlay, ITetrisListener {
                 }
                 this.addShadow(after.index, oldpos, newpos);
             }
-        } else if (type != ButtonType.Left && type != ButtonType.Right) {
+        } else if (type !== ButtonType.Left && type !== ButtonType.Right) {
             this.addShadow(before.index, before.pos, after.pos);
         }
     }
@@ -235,7 +235,8 @@ export class GamePlay implements IPlay, ITetrisListener {
                 break;
             }
             const col = minoColorList[next.index];
-            if (i == 1000 && !current) {
+            // いったん保留
+            if (i === 1000 && !current) {
                 // nextを描画
                 for (let i = 0; i < next.pos.length; i += 2) {
                     data.block.push({
@@ -297,7 +298,7 @@ export class GamePlay implements IPlay, ITetrisListener {
                 ver = top;
             }
         }
-        if (this.lastWeight.horizontal != weight || this.lastWeight.vertical != ver) {
+        if (this.lastWeight.horizontal !== weight || this.lastWeight.vertical !== ver) {
             if (this.lastWeight.horizontal < weight) {
                 this.lastWeight.horizontal += 1;
                 if (this.lastWeight.horizontal > weight) {
@@ -333,6 +334,7 @@ export class GamePlay implements IPlay, ITetrisListener {
 
         if (this.playData.isGameOver()) {
             this.fontRender.draw(gl, "GAME OVER", [-0.5, -0.1, 1, 0.2], [1, 0.4, 0.3, 1]);
+            this.fontRender.draw(gl, "PRESS " + stick.getButtonName(ButtonType.Start), [-0.3, 0.3, 0.6, 0.1], [1, 1, 1]);
             if (stick.isStart(true)) {
                 return new TitlePlay(gl);
             }

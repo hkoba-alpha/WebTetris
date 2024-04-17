@@ -1,9 +1,9 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import React, { useRef, useEffect, useState } from 'react';
-import { ButtonType, GamepadStick, IPlay, KeyboardStick, StickData, saveData } from '../services/PlayData';
+import { ButtonType, GamepadStick, IPlay, KeyboardStick, saveData } from '../services/PlayData';
 import { TitlePlay } from '../services/TitlePlay';
 import { Button, Col, Container, Modal, Row, Table } from 'react-bootstrap';
-import { ArrowLeft, ArrowRight, ArrowUp, ArrowDown, CardList, CaretRight, BoxArrowInDownLeft, BoxArrowInDownRight, ArrowReturnLeft, ArrowReturnRight, ArrowRepeat, BoxArrowInDown, PlayFill, ArrowClockwise, ArrowCounterclockwise } from 'react-bootstrap-icons';
+import { ArrowLeft, ArrowRight, ArrowDown, CaretRight, ArrowRepeat, BoxArrowInDown, ArrowClockwise, ArrowCounterclockwise } from 'react-bootstrap-icons';
 
 interface CanvasComponentProps {
     // ここに必要なプロパティを追加

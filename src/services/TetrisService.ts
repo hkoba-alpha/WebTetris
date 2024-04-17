@@ -703,10 +703,138 @@ export let normalTgmConfig: TgmConfig = [
     },
     {
         level: 900,
-        nextLevel: 999,
+        nextLevel: 1000,
         config: {
             das: 8,
             lock: 17
+        }
+    },
+    {
+        level: 1000,
+        nextLevel: 1100,
+        config: {
+            are: 8
+        }
+    },
+    {
+        level: 1100,
+        nextLevel: 1200,
+        config: {
+            are: 7,
+            lineAre: 7,
+            lock: 15
+        }
+    },
+    {
+        level: 1200,
+        nextLevel: 1300,
+        config: {
+            are: 6,
+            lineAre: 6
+        }
+    }
+];
+
+export let hardTgmConfig: TgmConfig = [
+    {
+        level: 0,
+        nextLevel: 100,
+        config: {
+            are: 12,
+            lineAre: 8,
+            das: 10,
+            lock: 18,
+            lineClear: 6,
+            gravidy: 1310720
+        },
+        bg: [[32, 32, 128], [64, 64, 192], [16, 16, 96], [48, 48, 160]]
+    },
+    {
+        level: 100,
+        nextLevel: 200,
+        config: {
+            lineAre: 7,
+            das: 8,
+            lineClear: 5
+        }
+    },
+    {
+        level: 200,
+        nextLevel: 300,
+        config: {
+            lineAre: 6,
+            lock: 17,
+            lineClear: 4
+        }
+    },
+    {
+        level: 300,
+        nextLevel: 400,
+        config: {
+            are: 6,
+            lock: 15
+        }
+    },
+    {
+        level: 400,
+        nextLevel: 500,
+        config: {
+
+        }
+    },
+    {
+        level: 500,
+        nextLevel: 600,
+        config: {
+            lineAre: 5,
+            das: 6,
+            lock: 13,
+            lineClear: 3
+        }
+    },
+    {
+        level: 600,
+        nextLevel: 700,
+        config: {
+            lock: 12
+        }
+    },
+    {
+        level: 700,
+        nextLevel: 800,
+        config: {
+        }
+    },
+    {
+        level: 800,
+        nextLevel: 900,
+        config: {
+        }
+    },
+    {
+        level: 900,
+        nextLevel: 1000,
+        config: {
+        }
+    },
+    {
+        level: 1000,
+        nextLevel: 1100,
+        config: {
+        }
+    },
+    {
+        level: 1100,
+        nextLevel: 1200,
+        config: {
+            lock: 10
+        }
+    },
+    {
+        level: 1200,
+        nextLevel: 1300,
+        config: {
+            lock: 8
         }
     },
 ];
@@ -1450,7 +1578,7 @@ export class TetrisGameOverPlay implements ITetrisInsertPaly {
     private timeCount = 0;
 
     public constructor() {
-
+        // 何もなし
     }
 
     onInsertFrame(playData: PlayData): boolean {

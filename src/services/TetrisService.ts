@@ -1591,7 +1591,7 @@ export class TetrisGameOverPlay implements ITetrisInsertPaly {
             for (let x = 0; x < 10; x++) {
                 if (data[(this.lineY << 4) | x] & 0x80) {
                     // ブロックがあった
-                    data[(this.lineY << 4) | x] = 0xc0;
+                    data[(this.lineY << 4) | x] = 0xd0;
                 }
             }
             this.lineY++;

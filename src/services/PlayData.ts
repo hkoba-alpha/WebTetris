@@ -9,7 +9,7 @@ export interface ConfigData {
 export interface GamePadConfig {
     axisX: number;
     axisY: number;
-    buttons: { [key: number]: number };
+    buttons: number[];
 }
 
 class GameSaveData extends Dexie {
@@ -52,16 +52,10 @@ export enum ButtonType {
     Right,
     Drop,
     HardDrop,
-    LeftTurn,
-    RightTurn,
     Hold,
-    Start
-}
-
-export interface GamePadConfig {
-    axisX: number;
-    axisY: number;
-    buttons: { [key: number]: number };
+    Start,
+    LeftTurn,
+    RightTurn
 }
 
 export interface StickData {
@@ -88,12 +82,12 @@ const defaultGamePadConfig: { [id: string]: GamePadConfig } = {
     "default": {
         axisX: 0,
         axisY: 1,
-        buttons: [14, 15, 12, 13, 0, 1, 9, 8]
+        buttons: [14, 15, 13, 12, 0, 1, 3, 9]
     },
     "Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 09cc)": {
         axisX: 0,
         axisY: 1,
-        buttons: [14, 15, 12, 13, 0, 1, 9, 8]
+        buttons: [14, 15, 13, 12, 0, 1, 3, 9]
     }
 };
 
@@ -248,6 +242,16 @@ export class GamepadStick extends KeyboardStick {
                 this.pushed[index] = false;
             }
             return true;
+        } else if (type === ButtonType.LeftTurn || type === ButtonType.RightTurn) {
+            if (this.padConfig.buttons.length > type + 2) {
+                const index2 = this.padConfig.buttons[type + 2];
+                if (this.pushed[index2]) {
+                    if (cancel) {
+                        this.pushed[index2] = false;
+                    }
+                    return true;
+                }
+            }
         }
         return super.isButtonDown(type, cancel);
     }

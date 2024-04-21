@@ -18,6 +18,8 @@ const keyConfigIndex = [
     ButtonType.Start,
     ButtonType.Hold,
     ButtonType.LeftTurn,
+    ButtonType.RightTurn,
+    ButtonType.LeftTurn,
     ButtonType.RightTurn
 ];
 
@@ -33,7 +35,7 @@ const keyConfigLabels = [
 ];
 
 let configSetMap: { [key: string]: number; } = {};
-let padSetMap: { [button: number]: number } = {};
+let padSetMap: { [button: string]: number } = {};
 
 const CanvasComponent: React.FC<CanvasComponentProps> = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -51,15 +53,31 @@ const CanvasComponent: React.FC<CanvasComponentProps> = () => {
 
     const makeKeyLabels = () => {
         const config = stickRef.current.getKeyConfig();
+        let mask = 0;
         for (let key in config) {
             const type = config[key];
-            keyConfigLabels[keyConfigIndex.indexOf(type)] = key;
+            let ix = keyConfigIndex.indexOf(type);
+            if (ix >= 6) {
+                if (mask & (1 << ix)) {
+                    // すでに設定済み
+                    ix += 2;
+                } else {
+                    keyConfigLabels[ix + 2] = key;
+                }
+            }
+            mask |= (1 << ix);
+            keyConfigLabels[ix] = key;
         }
     };
     const makePadLabels = () => {
         const config = (stickRef.current as GamepadStick).getPadConfig();
-        for (let type of keyConfigIndex) {
-            keyConfigLabels[keyConfigIndex.indexOf(type)] = "Button " + config.buttons[type];
+        let mask = 0;
+        for (let ix = 0; ix < keyConfigIndex.length; ix++) {
+            if (ix < config.buttons.length) {
+                keyConfigLabels[ix] = "Button " + config.buttons[ix];
+            } else {
+                keyConfigLabels[ix] = "Button " + config.buttons[ix - 2];
+            }
         }
     };
 
@@ -69,8 +87,11 @@ const CanvasComponent: React.FC<CanvasComponentProps> = () => {
             return;
         }
         (stickRef.current as GamepadStick).resetPad();
-        padSetMap[button] = keyConfigIndex[keySelectRef.current];
+        padSetMap[String(button)] = keyConfigIndex[keySelectRef.current];
         keyConfigLabels[keySelectRef.current] = "Button " + button;
+        if (keySelectRef.current === 6 || keySelectRef.current === 7) {
+            keyConfigLabels[keySelectRef.current + 2] = "Button " + button;
+        }
         if (keySelectRef.current + 1 < keyConfigLabels.length) {
             setKeySelect(keySelectRef.current + 1);
         } else {
@@ -103,8 +124,13 @@ const CanvasComponent: React.FC<CanvasComponentProps> = () => {
         if (padConfig) {
             const pad = stickRef.current as GamepadStick;
             let newConfig = pad.getPadConfig();
+            newConfig.buttons = [];
             for (let key in padSetMap) {
-                newConfig.buttons[padSetMap[key]] = parseInt(key);
+                let ix = padSetMap[key];
+                if (newConfig.buttons[ix] !== undefined && ix >= 6) {
+                    ix += 2;
+                }
+                newConfig.buttons[ix] = parseInt(key);
             }
             pad.setPadConfig(newConfig);
         } else {
@@ -152,6 +178,9 @@ const CanvasComponent: React.FC<CanvasComponentProps> = () => {
                 event.preventDefault();
                 configSetMap[event.code] = keySelectRef.current;
                 keyConfigLabels[keySelectRef.current] = event.code;
+                if (keySelectRef.current === 6 || keySelectRef.current === 7) {
+                    keyConfigLabels[keySelectRef.current + 2] = event.code;
+                }
                 if (keySelectRef.current + 1 < keyConfigLabels.length) {
                     setKeySelect(keySelectRef.current + 1);
                 } else {
@@ -212,8 +241,8 @@ const CanvasComponent: React.FC<CanvasComponentProps> = () => {
                         <tr><td><ArrowRight></ArrowRight></td><td>{keyLabels[3]}</td><td>右移動</td></tr>
                         <tr><td><CaretRight></CaretRight></td><td>{keyLabels[4]}</td><td>ゲーム開始</td></tr>
                         <tr><td><ArrowRepeat></ArrowRepeat></td><td>{keyLabels[5]}</td><td>ホールド</td></tr>
-                        <tr><td><ArrowCounterclockwise></ArrowCounterclockwise></td><td>{keyLabels[6]}</td><td>左回転</td></tr>
-                        <tr><td><ArrowClockwise></ArrowClockwise></td><td>{keyLabels[7]}</td><td>右回転</td></tr>
+                        <tr><td><ArrowCounterclockwise></ArrowCounterclockwise></td><td>{keyLabels[6]}<br/>{keyLabels[8]}</td><td>左回転</td></tr>
+                        <tr><td><ArrowClockwise></ArrowClockwise></td><td>{keyLabels[7]}<br/>{keyLabels[9]}</td><td>右回転</td></tr>
                     </tbody>
                 </Table>
                 <Button onClick={(event) => openDialog(false, event.target as HTMLButtonElement)}>キー設定</Button>
@@ -263,16 +292,18 @@ const CanvasComponent: React.FC<CanvasComponentProps> = () => {
                                 <Col xs={3} className='text-center'>
                                     <ArrowCounterclockwise size={50} className={keySelect === 6 ? 'bg-info' : ''}></ArrowCounterclockwise>
                                     <p style={{ fontSize: '10px' }}>{keyConfig[6]}</p>
+                                    <p style={{ fontSize: '10px' }}  className={keySelect === 8 ? 'bg-info' : ''}>{keyConfig[8]}</p>
                                 </Col>
                                 <Col xs={3} className='text-center'>
                                     <ArrowClockwise size={50} className={keySelect === 7 ? 'bg-info' : ''}></ArrowClockwise>
                                     <p style={{ fontSize: '10px' }}>{keyConfig[7]}</p>
+                                    <p style={{ fontSize: '10px' }} className={keySelect === 9 ? 'bg-info' : ''}>{keyConfig[9]}</p>
                                 </Col>
                             </Row>
                         </Container>
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button disabled={keySelect >= 0} variant='success' onClick={applyDialog}>決定</Button>
+                        <Button disabled={keySelect >= 0 && keySelect < 8} variant='success' onClick={applyDialog}>決定</Button>
                         <Button disabled={keySelect === 0} variant='warning' onClick={() => openDialog(padConfig)}>再設定</Button>
                         <Button variant='danger' onClick={closeDialog}>キャンセル</Button>
                     </Modal.Footer>

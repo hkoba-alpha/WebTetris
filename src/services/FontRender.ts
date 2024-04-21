@@ -31,12 +31,17 @@ const alphaData = [
     0xf7, 0x128f, 0x39, 0x120f, 0xf9, 0xf1, 0xbd, 0xf6, 0x1209, 0x1e, 0x2470, 0x38, 0x536, 0x2136,
     0x3f, 0xf3, 0x203f, 0x20f3, 0x18d, 0x1201, 0x3e, 0xc30, 0x2836, 0x2d00, 0x1500, 0xc09
 ];
-const etcData = [
+const etcData: { [key: string]: number; } = {
     // コロン
-    0xc000,
+    ":": 0xc000,
     // ピリオド
-    0x10000
-];
+    ".": 0x10000,
+    ",": 0x10000,
+    "-": 0xc0,
+    "/": 0xc00,
+    "'": 0x400,
+    "!": 0x10400
+};
 
 export class FontRender {
     private program: WebGLProgram;
@@ -207,7 +212,7 @@ export class FontRender {
         return ret;
     }
 
-    public draw(gl: WebGL2RenderingContext, text: string, rect: number[], color: number[]): void {
+    public draw(gl: WebGL2RenderingContext, text: string, rect: number[], color: number[], zpos = -0.5): void {
         if (color.length === 3) {
             color = [...color, 1.0];
         }
@@ -229,21 +234,19 @@ export class FontRender {
             } else if (ch >= 65 && ch - 65 < alphaData.length) {
                 // 英字
                 flag = alphaData[ch - 65];
-            } else if (ch === ':'.charCodeAt(0)) {
-                flag = etcData[0];
-            } else if (ch === '.'.charCodeAt(0)) {
-                flag = etcData[1];
+            } else if (text.charAt(i) in etcData) {
+                flag = etcData[text.charAt(i)];
             }
             if (flag > 0) {
                 for (let j = 0; j < this.segmentData.length; j++) {
                     if (flag & (1 << j)) {
                         const mx = width / 20.0;
                         const my = rect[3] / 20.0;
-                        gl.uniform3f(this.uPos, x, rect[1], -0.5);
+                        gl.uniform3f(this.uPos, x, rect[1], zpos);
                         gl.uniform2f(this.uSize, width - mx, rect[3]);
                         gl.uniform4fv(this.uColor, color);
                         gl.drawArrays(gl.TRIANGLE_FAN, this.segmentData[j][0], this.segmentData[j][1]);
-                        gl.uniform3f(this.uPos, x + mx, rect[1] + my, -0.3);
+                        gl.uniform3f(this.uPos, x + mx, rect[1] + my, zpos + 0.2);
                         gl.uniform2f(this.uSize, width - mx, rect[3]);
                         gl.uniform4fv(this.uColor, [0, 0, 0, color[3]]);
                         gl.drawArrays(gl.TRIANGLE_FAN, this.segmentData[j][0], this.segmentData[j][1]);

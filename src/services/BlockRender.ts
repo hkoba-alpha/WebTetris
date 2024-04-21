@@ -37,6 +37,7 @@ export interface DrawBlockData {
     block: MinoBlock[];
     shadow: MinoBlock[];
     next: MinoBlock[];
+    bg: number[];
 }
 
 export function getProjection(fieldOfViewInRadians: number, aspectRatio: number, near: number, far: number): number[] {
@@ -313,11 +314,13 @@ export class BlockRender {
 
         // 外枠
         gl.uniform3f(this.uBlkpos, 0, 0, 0);
+        gl.uniform4f(this.uColor, data.bg[0], data.bg[1], data.bg[2], 1.0);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 66, 4);
+        gl.clearDepth(1.0);
+        gl.clear(gl.DEPTH_BUFFER_BIT);
         //gl.uniform3f(this.uBlkpos, 0, 0, 0);
         gl.uniform4f(this.uColor, 1, 1, 1.0, 1.0);
         gl.drawArrays(gl.TRIANGLE_STRIP, 16, 26);
-        gl.uniform4f(this.uColor, 0, 0, 0.4, 1.0);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 66, 4);
         //gl.drawArrays(gl.LINES, 66, 18);
 
         for (let dt of data.block) {
@@ -341,6 +344,9 @@ export class BlockRender {
             gl.uniform4fv(this.uColor, dt.color);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 16);
         }
+
+        gl.disableVertexAttribArray(this.aPos);
+        gl.disableVertexAttribArray(this.aNormal);
     }
 }
 

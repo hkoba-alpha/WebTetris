@@ -1,3 +1,4 @@
+import { HanabiData } from "./HanabiRender";
 import { ButtonType } from "./PlayData";
 
 /**
@@ -437,7 +438,8 @@ export type TgmConfig = {
     level: number;
     nextLevel: number;
     /** 背景色 */
-    bg?: number[][];
+    bg?: number[];
+    option?: string;
     config: {
         /** 落下速度 */
         gravidy?: number;
@@ -460,6 +462,38 @@ export type TgmConfig = {
     };
 }[];
 
+export let specialTgmConfig: TgmConfig = [
+    {
+        level: 0,
+        nextLevel: 100,
+        config: {
+            are: 27,
+            lineAre: 27,
+            das: 16,
+            lock: 30,
+            lineClear: 40,
+            gravidy: 65536
+        },
+        bg: [64, 64, 26]
+    },
+    {
+        level: 100,
+        nextLevel: 100,
+        option: "clear",
+        config: {
+            gravidy: 65536
+        }
+    },
+    {
+        level: 100,
+        nextLevel: 100,
+        config: {
+            gravidy: 65536,
+            invisibleCount: 2
+        }
+    },
+];
+
 /**
  * 標準的なコンフィグ
  */
@@ -475,7 +509,7 @@ export let normalTgmConfig: TgmConfig = [
             lineClear: 40,
             gravidy: 1024
         },
-        bg: [[32, 32, 128], [64, 64, 192], [16, 16, 96], [48, 48, 160]]
+        bg: [32, 32, 128]
     },
     {
         level: 30,
@@ -703,17 +737,42 @@ export let normalTgmConfig: TgmConfig = [
     },
     {
         level: 900,
-        nextLevel: 1000,
+        nextLevel: 999,
         config: {
             das: 8,
             lock: 17
         }
     },
+    // Clear
     {
-        level: 1000,
+        level: 999,
+        nextLevel: 999,
+        option: "clear",
+        config: {}
+    },
+    // endroll
+    {
+        level: 999,
+        nextLevel: 1050,
+        config: {
+            are: 27,
+            lineAre: 27,
+            das: 10,
+            lock: 30,
+            lineClear: 25,
+            invisibleCount: 2
+        }
+    },
+    {
+        level: 1050,
         nextLevel: 1100,
         config: {
-            are: 8
+            invisibleCount: 0,
+            are: 8,
+            lineAre: 8,
+            das: 8,
+            lock: 17,
+            lineClear: 6,
         }
     },
     {
@@ -747,7 +806,7 @@ export let hardTgmConfig: TgmConfig = [
             lineClear: 6,
             gravidy: 1310720
         },
-        bg: [[32, 32, 128], [64, 64, 192], [16, 16, 96], [48, 48, 160]]
+        bg: [96, 16, 16]
     },
     {
         level: 100,
@@ -843,12 +902,13 @@ export class TgmPlayListener implements ITetrisListener, INextMino {
     public level: number;
     public nextLevel: number;
     private lastConfig: PlayConfig;
-    private nextBg?: number[][];
+    private nextBg?: number[];
 
     // 最後の４つ
     private lastMinos = "SZSZ";
 
     private configIndex = 0;
+    private nextOption?: string;
 
     constructor(private config: TgmConfig) {
         this.lastConfig = {
@@ -896,6 +956,10 @@ export class TgmPlayListener implements ITetrisListener, INextMino {
                 if (cf.bg) {
                     this.nextBg = cf.bg;
                 }
+                this.nextOption = cf.option;
+                if (this.level >= this.nextLevel) {
+                    this.level = this.nextLevel;
+                }
                 return;
             }
         } else if (this.level > this.nextLevel) {
@@ -904,12 +968,25 @@ export class TgmPlayListener implements ITetrisListener, INextMino {
         }
     }
 
-    public getBgColor(): number[][] | undefined {
+    public getBgColor(): number[] | undefined {
         let ret = this.nextBg;
         this.nextBg = undefined;
         return ret;
     }
 
+    onPreNext(play: PlayData): void {
+        if (this.nextOption === "clear") {
+            play.resetBlockAnimation();
+            play.setInsertPlay(new HanabiInsertPlay(15, () => {
+                play.setInsertPlay(new HanabiInsertPlay(25, () => {
+                    this.checkConfig();
+                    play.setGameMode("endroll");
+                    play.setInsertPlay(new WaitInsertPlay(120));
+                }))
+            }, false));
+            this.nextOption = undefined;
+        }
+    }
     onHold(): void {
     }
     onDrop(num: number): void {
@@ -966,6 +1043,30 @@ export interface ITetrisListener {
      * @param type Left, Right, Drop, LeftTurn, RightTurn, Hold
      */
     onMove?(before: { index: number, pos: number[] }, after: { index: number, pos: number[] }, type: ButtonType): void;
+
+    /**
+     * 花火を打ち上げる
+     * @param data 
+     */
+    onHanabi?(data: HanabiData): void;
+
+    /**
+     * NEXTの直前
+     * @param play 
+     */
+    onPreNext?(play: PlayData): void;
+
+    /**
+     * ラインを削除する
+     * @param line 
+     */
+    onBreakLine?(line: number): void;
+
+    /**
+     * ゲームモードが変わった
+     * @param mode 
+     */
+    onChangeMode?(mode: string): void;
 }
 
 /**
@@ -1090,9 +1191,13 @@ export class PlayData {
 
     private insertPlay?: ITetrisInsertPaly;
 
-    private overFlag = false;
+    /**
+     * 特殊なゲームモードがあれば設定で使える
+     */
+    private gameMode: string;
 
     constructor(private button: ButtonData, private listener: ITetrisListener) {
+        this.gameMode = "";
         this.blockData = new Uint8Array(16 * 32);
         this.modeCount = 30;
         this.mode = 0;
@@ -1176,6 +1281,7 @@ export class PlayData {
         // GameOver判定
         if (!this.canMove(0, 0, 0)) {
             console.log("Game Over");
+            this.resetBlockAnimation();
             this.setInsertPlay(new TetrisGameOverPlay());
         }
     }
@@ -1200,12 +1306,22 @@ export class PlayData {
                 }
             }
             if (this.insertPlay) {
-                if (!this.insertPlay.onInsertFrame(this)) {
-                    this.insertPlay = undefined;
+                const prev = this.insertPlay;
+                if (!prev.onInsertFrame(this)) {
+                    if (this.insertPlay === prev) {
+                        this.insertPlay = undefined;
+                    } else {
+                        // 入れ替わった
+                        continue;
+                    }
+                } else {
+                    continue;
                 }
-                continue;
             }
             if (this.mode === 0) {
+                if (this.listener.onPreNext) {
+                    this.listener.onPreNext(this);
+                }
                 if (this.modeCount > 0) {
                     this.modeCount--;
                     continue;
@@ -1418,6 +1534,22 @@ export class PlayData {
             }
         }
     }
+    /**
+     * アニメーション等で消えていたブロックをすべて戻す
+     */
+    public resetBlockAnimation(): void {
+        for (let y = 0; y < 20; y++) {
+            for (let x = 0; x < 16; x++) {
+                if (x < 10) {
+                    if (this.blockData[y * 16 + x]) {
+                        this.blockData[y * 16 + x] = (this.blockData[y * 16 + x] & 7) | 0xd0;
+                    }
+                } else {
+                    this.blockData[y * 16 + x] = 0;
+                }
+            }
+        }
+    }
 
     private canMove(dx: number, dy: number, dix: number): boolean {
         let ix = (this.curMino.rotate + dix) & 3;
@@ -1469,6 +1601,20 @@ export class PlayData {
             }
         }
         return this.delLines.length > 0;
+    }
+
+    /**
+     * ラインを消す
+     * @param line 
+     */
+    public breakLine(line: number): void {
+        if (this.listener.onBreakLine) {
+            const yix = line * 16;
+            this.listener.onBreakLine(line);
+            for (let x = 0; x < 16; x++) {
+                this.blockData[yix | x] = 0;
+            }
+        }
     }
 
     public getGhost(): number[] | null {
@@ -1560,11 +1706,22 @@ export class PlayData {
     public getInsertPlay(): ITetrisInsertPaly | undefined {
         return this.insertPlay;
     }
-    public isGameOver(): boolean {
-        return this.overFlag;
+    public getGameMode(): string {
+        return this.gameMode;
     }
-    public setGameOver(): void {
-        this.overFlag = true;
+    public setGameMode(mode: string): void {
+        if (this.gameMode !== mode) {
+            this.gameMode = mode;
+            if (this.listener.onChangeMode) {
+                this.listener.onChangeMode(mode);
+            }
+        }
+    }
+
+    public addHanabi(data: HanabiData): void {
+        if (this.listener.onHanabi) {
+            this.listener.onHanabi(data);
+        }
     }
 }
 
@@ -1596,9 +1753,60 @@ export class TetrisGameOverPlay implements ITetrisInsertPaly {
             }
             this.lineY++;
         } else {
-            playData.setGameOver();
+            playData.setGameMode("gameover");
         }
         this.timeCount = 12;
         return true;
     }
+}
+
+export class HanabiInsertPlay implements ITetrisInsertPaly {
+    private timer: number;
+    private delLine: number = 0;
+
+    public constructor(private count: number, private callback: (() => void) | undefined = undefined, delFlag: boolean = true, private delay = 10) {
+        this.timer = delay;
+        if (!delFlag) {
+            this.delLine = 20;
+        }
+    }
+
+    onInsertFrame(playData: PlayData): boolean {
+        if (this.timer > 0) {
+            this.timer--;
+            return true;
+        }
+        this.timer = this.delay;
+        if (this.delLine < 20) {
+            playData.breakLine(this.delLine);
+            this.delLine++;
+        }
+        // tetris
+        playData.addHanabi(new HanabiData(Math.random() * 200 + 156, Math.random() * 300 + 120, 100));
+        this.count--;
+        if (this.count == 0 && this.callback) {
+            this.callback();
+        }
+        return this.count > 0;
+    }
+}
+
+export class WaitInsertPlay implements ITetrisInsertPaly {
+    /**
+     * 
+     * @param waitTime -1だと永久
+     * @param callback 
+     */
+    public constructor(private waitTime: number, private callback: (() => void) | undefined = undefined) {
+    }
+    onInsertFrame(playData: PlayData): boolean {
+        if (this.waitTime > 0) {
+            this.waitTime--;
+            if (this.waitTime == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 }
